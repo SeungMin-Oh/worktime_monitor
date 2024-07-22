@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
-
 import argparse
+import datetime
 
 # 명령줄 인수 파서 설정
 parser = argparse.ArgumentParser(description="Tmax SSO Login Script")
@@ -21,6 +21,7 @@ login_data = {
     "passwd": args.password,
     "company": args.company
 }
+
 # 로그인 요청 보내기
 login_response = session.post(login_url, data=login_data)
 
@@ -42,43 +43,49 @@ if login_response.status_code == 200 and "tmaxsso_tokn" in login_response.text:
     if sso_response.status_code == 200:
         print("SSO 인증 및 최종 로그인 성공!")
 
-        # 중간 페이지 요청 보내기
-        middle_page_url = "https://otims.tmax.co.kr/frame.screen"
-        middle_page_data = {
-            "accessMode": "2",
-            "goUrl": "/frame.screen",
-            "survey_popup": "T"
+        # 근태기록 조회 페이지로 이동
+        attendance_url = "https://otims.tmax.co.kr/corp/kor/attendance/findAttdDailyConfirm.screen"
+        today = datetime.datetime.today().strftime('%Y%m%d')
+        start_date = '20240712'
+        end_date = '20240722'
+        attendance_data = {
+            'attdKind': '',  # 필요한 경우 적절히 변경
+            'stDate': start_date,
+            'edDate': end_date,
+            'status': '',
+            'deptCd': '2600',
+            'hier': 'Y',
+            'empNm': '',
+            'empCls': '',
+            'isAdmin': 'false',
+            'retStDate': start_date,
+            'retEdDate': end_date
         }
 
-        middle_page_response = session.post(middle_page_url, data=middle_page_data)
+        attendance_page_response = session.post(attendance_url, data=attendance_data)
 
-        # 중간 페이지 성공 여부 확인
-        if middle_page_response.status_code == 200:
-            print("중간 페이지 요청 성공!")
-            
-	    # BeautifulSoup을 사용하여 HTML 파싱
-            soup = BeautifulSoup(middle_page_response.text, 'html.parser')
-            form = soup.find('form')
-            if form:
-                action_url = form['action']
-                form_data = {tag['name']: tag['value'] for tag in form.find_all('input')}
+        if attendance_page_response.status_code == 200:
+            print("근태기록 조회 페이지 접근 성공")
 
-                # 최종 페이지 요청 보내기
-                final_response = session.post(action_url, data=form_data)
-                
-                if final_response.status_code == 200:
-                    print("최종 페이지 요청 성공!")
-                    print(final_response.text)
-                else:
-                    print(f"최종 페이지 요청 실패: {final_response.status_code}")
-                    print(final_response.text)
-            else:
-                print("폼을 찾을 수 없습니다. 메인 페이지가 이미 로드되었을 수 있습니다.")
-                print(middle_page_response.text)
+            # 근태기록 데이터 추출 (필요한 데이터 구조에 맞게 수정 필요)
+            attendance_soup = BeautifulSoup(attendance_page_response.text, 'html.parser')
+            attendance_records = []
+            table = attendance_soup.find('table', {'id': 'listTable'})
+            if table:
+                for row in table.find_all('tr')[1:]:  # 헤더 행 제외
+                    cols = row.find_all('td')
+                    record = {
+                        "date": cols[0].text.strip(),
+                        "status": cols[1].text.strip(),
+                        # 필요한 다른 데이터 항목들
+                    }
+                    attendance_records.append(record)
 
+            # 추출된 데이터 출력 또는 처리
+            for record in attendance_records:
+                print(record)
         else:
-            print(f"중간 페이지 요청 실패: {middle_page_response.status_code}")
-            print(middle_page_response.text)
+            print("근태기록 조회 페이지 접근 실패")
     else:
         print(f"SSO 인증 실패: {sso_response.status_code}")
         print(sso_response.text)
