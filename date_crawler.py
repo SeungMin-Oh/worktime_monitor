@@ -28,9 +28,8 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 }
 
-
 # 로그인 요청 보내기
-login_response = session.post(login_url, data=login_data, headers = headers)
+login_response = session.post(login_url, data=login_data, headers=headers)
 
 # 로그인 성공 여부 확인
 if login_response.status_code == 200 and "tmaxsso_tokn" in login_response.text:
@@ -62,9 +61,11 @@ if login_response.status_code == 200 and "tmaxsso_tokn" in login_response.text:
 
             # 근태기록 조회 페이지로 이동
             attendance_url = "https://otims.tmax.co.kr/insa/attend/findAttdDailyConfirm.screen"
-            today = datetime.datetime.today().strftime('%Y%m%d')
-            start_date = '20240712'
-            end_date = '20240722'
+            
+            today = datetime.datetime.today()
+            start_date = today.replace(day=1).strftime('%Y%m%d')
+            end_date = (today - datetime.timedelta(days=1)).strftime('%Y%m%d')
+            
             attendance_data = {
                 'attdKind': '',
                 'stDate': start_date,
@@ -117,14 +118,21 @@ if login_response.status_code == 200 and "tmaxsso_tokn" in login_response.text:
 
                 # 시간 계산을 위해 데이터 변환
                 def convert_to_minutes(time_str):
-                    if ':' in time_str:
-                        hours, minutes = map(int, time_str.split(':'))
-                        return hours * 60 + minutes
+                    try:
+                        if ':' in time_str:
+                            hours, minutes = map(int, time_str.split(':'))
+                            return hours * 60 + minutes
+                    except ValueError:
+                        pass  # 잘못된 데이터 형식 무시
                     return 0
 
                 df['late_time_minutes'] = df['late_time'].apply(convert_to_minutes)
-                df['work_time_minutes'] = (df['work_end'].apply(convert_to_minutes) - df['work_start'].apply(convert_to_minutes))
+                df['work_start_minutes'] = df['work_start'].apply(convert_to_minutes)
+                df['work_end_minutes'] = df['work_end'].apply(convert_to_minutes)
 
+                # 근무 시간 계산
+                df['work_time_minutes'] = df['work_end_minutes'] - df['work_start_minutes']
+                
                 # 인원별 평균 근태 시간 계산
                 avg_late_time = df.groupby('name')['late_time_minutes'].mean()
                 avg_work_time = df.groupby('name')['work_time_minutes'].mean()
@@ -132,12 +140,25 @@ if login_response.status_code == 200 and "tmaxsso_tokn" in login_response.text:
                 avg_late_time_df = avg_late_time.reset_index()
                 avg_work_time_df = avg_work_time.reset_index()
 
+                # 이번 주 날짜 계산
+                start_of_week = today - datetime.timedelta(days=today.weekday())
+                end_of_week = start_of_week + datetime.timedelta(days=4)  # 금요일까지
+
+                df['date'] = pd.to_datetime(df['date'], format='%Y.%m.%d')
+                this_week_df = df[(df['date'] >= start_of_week) & (df['date'] <= end_of_week)]
+
+                avg_work_time_this_week = this_week_df.groupby('name')['work_time_minutes'].mean().reset_index()
+
                 # 평균 시간 결과 출력
                 print("인원별 평균 지각 시간 (분):")
                 print(avg_late_time_df)
-                
+
                 print("\n인원별 평균 근무 시간 (분):")
                 print(avg_work_time_df)
+
+                print("\n이번 주 인원별 평균 근무 시간 (분):")
+                print(avg_work_time_this_week)
+
             else:
                 print("근태기록 조회 페이지 접근 실패")
                 print(f"상태 코드: {attendance_page_response.status_code}")
