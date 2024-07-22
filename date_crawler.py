@@ -42,19 +42,43 @@ if login_response.status_code == 200 and "tmaxsso_tokn" in login_response.text:
     if sso_response.status_code == 200:
         print("SSO 인증 및 최종 로그인 성공!")
 
-        # 메인 페이지 URL 설정
-        main_page_url = "https://otims.tmax.co.kr/frame.screen"
+        # 중간 페이지 요청 보내기
+        middle_page_url = "https://otims.tmax.co.kr/frame.screen"
+        middle_page_data = {
+            "accessMode": "2",
+            "goUrl": "/frame.screen",
+            "survey_popup": "T"
+        }
 
-        # 메인 페이지 요청 보내기
-        main_page_response = session.get(main_page_url)
+        middle_page_response = session.post(middle_page_url, data=middle_page_data)
 
-        # 요청 성공 여부 확인
-        if main_page_response.status_code == 200:
-            print("메인 페이지 요청 성공!")
-            print(main_page_response.text)
+        # 중간 페이지 성공 여부 확인
+        if middle_page_response.status_code == 200:
+            print("중간 페이지 요청 성공!")
+            
+	    # BeautifulSoup을 사용하여 HTML 파싱
+            soup = BeautifulSoup(middle_page_response.text, 'html.parser')
+            form = soup.find('form')
+            if form:
+                action_url = form['action']
+                form_data = {tag['name']: tag['value'] for tag in form.find_all('input')}
+
+                # 최종 페이지 요청 보내기
+                final_response = session.post(action_url, data=form_data)
+                
+                if final_response.status_code == 200:
+                    print("최종 페이지 요청 성공!")
+                    print(final_response.text)
+                else:
+                    print(f"최종 페이지 요청 실패: {final_response.status_code}")
+                    print(final_response.text)
+            else:
+                print("폼을 찾을 수 없습니다. 메인 페이지가 이미 로드되었을 수 있습니다.")
+                print(middle_page_response.text)
+
         else:
-            print(f"메인 페이지 요청 실패: {main_page_response.status_code}")
-            print(main_page_response.text)
+            print(f"중간 페이지 요청 실패: {middle_page_response.status_code}")
+            print(middle_page_response.text)
     else:
         print(f"SSO 인증 실패: {sso_response.status_code}")
         print(sso_response.text)
