@@ -105,8 +105,8 @@ if login_response.status_code == 200 and "tmaxsso_tokn" in login_response.text:
                                 "name": cols[4].text.strip(),
                                 "position": cols[5].text.strip(),
                                 "date": cols[7].text.strip(),
-                                "work_start": cols[10].text.strip(),
-                                "work_end": cols[11].text.strip(),
+                                "work_start": cols[9].text.strip(),
+                                "work_end": cols[12].text.strip(),
                                 "late_time": cols[14].text.strip(),
                                 "work_time": cols[15].text.strip()
                             }
@@ -123,7 +123,7 @@ if login_response.status_code == 200 and "tmaxsso_tokn" in login_response.text:
                     return 0
 
                 df['late_time_minutes'] = df['late_time'].apply(convert_to_minutes)
-                df['work_time_minutes'] = df['work_time'].apply(convert_to_minutes)
+                df['work_time_minutes'] = (df['work_end'].apply(convert_to_minutes) - df['work_start'].apply(convert_to_minutes))
 
                 # 인원별 평균 근태 시간 계산
                 avg_late_time = df.groupby('name')['late_time_minutes'].mean()
