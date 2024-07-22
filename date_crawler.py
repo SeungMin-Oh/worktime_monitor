@@ -80,14 +80,16 @@ if login_response.status_code == 200 and "tmaxsso_tokn" in login_response.text:
             }
 
             headers = {
-                'Content-Type': 'application/x-www-form-urlencoded'
+                'Content-Type': 'application/x-www-form-urlencoded',
+		'Referer': 'https://otims.tmax.co.kr/frame.screen',  # 적절한 Referer 설정
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
 
             attendance_page_response = session.post(attendance_url, data=attendance_data, headers=headers)
 
             if attendance_page_response.status_code == 200:
                 print("근태기록 조회 페이지 접근 성공")
-                print(attendance_page_response.text)
+                #print(attendance_page_response.text)
                 # 근태기록 데이터 추출 (필요한 데이터 구조에 맞게 수정 필요)
                 attendance_soup = BeautifulSoup(attendance_page_response.text, 'html.parser')
                 attendance_records = []
