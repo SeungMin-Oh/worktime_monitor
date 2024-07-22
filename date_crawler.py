@@ -22,6 +22,8 @@ login_data = {
     "company": args.company
 }
 
+#print(login_data["userId"] + " " + login_data["passwd"] + " " + login_data["company"]+"\n\n\n")
+
 # 로그인 요청 보내기
 login_response = session.post(login_url, data=login_data)
 
@@ -54,7 +56,8 @@ if login_response.status_code == 200 and "tmaxsso_tokn" in login_response.text:
             soup = BeautifulSoup(main_page_response.text, 'html.parser')
 
             # 근태기록 조회 페이지로 이동
-            attendance_url = "https://otims.tmax.co.kr/corp/kor/attendance/findAttdDailyConfirm.screen"
+            #attendance_url = "https://otims.tmax.co.kr/corp/kor/attendance/findAttdDailyConfirm.screen"
+            attendance_url = "https://otims.tmax.co.kr/insa/attend/findAttdDailyConfirm.screen"
             today = datetime.datetime.today().strftime('%Y%m%d')
             start_date = '20240712'
             end_date = '20240722'
@@ -70,10 +73,10 @@ if login_response.status_code == 200 and "tmaxsso_tokn" in login_response.text:
                 'isAdmin': 'false',
                 'retStDate': start_date,
                 'retEdDate': end_date,
-                'gbWork': '',
-                'accessMode': '2',
-                'goUrl': '/corp/kor/attendance/findAttdDailyConfirm.screen',
-                'survey_popup': 'T'
+                #'gbWork': '',
+                #'accessMode': '2',
+                #'goUrl': '/corp/kor/attendance/findAttdDailyConfirm.screen',
+                #'survey_popup': 'T'
             }
 
             headers = {
@@ -84,7 +87,7 @@ if login_response.status_code == 200 and "tmaxsso_tokn" in login_response.text:
 
             if attendance_page_response.status_code == 200:
                 print("근태기록 조회 페이지 접근 성공")
-
+                print(attendance_page_response.text)
                 # 근태기록 데이터 추출 (필요한 데이터 구조에 맞게 수정 필요)
                 attendance_soup = BeautifulSoup(attendance_page_response.text, 'html.parser')
                 attendance_records = []
